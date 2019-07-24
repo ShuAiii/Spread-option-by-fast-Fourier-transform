@@ -1,6 +1,10 @@
 classdef Spread
     % SPREAD is a class that calculate spread option price and Greeks by
     % FFT. There is also plot function within this class.
+
+    % User need to download the complex Gamma function from
+    % https://www.mathworks.com/matlabcentral/fileexchange/3572-gamma
+    % by Paul Godfrey and rename it "cgamma".
     
     % The function Spread.Price and Spread.Greek calculate price and Greek    
     % Parameters - (S1,S2,K,r,sigma1,sigma2,rho,tau)
