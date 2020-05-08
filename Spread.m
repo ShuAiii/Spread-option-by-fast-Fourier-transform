@@ -26,8 +26,8 @@ classdef Spread
     end
     
     methods(Static)    
-        function [p1,p2,C,H,HT,HH1,HH2,HHH11,HHH12,HHH22]=FFTMatrix(S1,S2,K,r,sigma1,sigma2,rho,tau)
-            N=64;
+        function [p1,p2,C,HH1,HH2,HT,HHH11,HHH12,HHH22]=FFTMatrix(S1,S2,K,r,sigma1,sigma2,rho,tau)
+            N=128;
             u_bar=40;
             e1=-3;
             e2=1;
@@ -61,14 +61,17 @@ classdef Spread
             
             rvec = [r,r]';
             sigma = [sigma1^2, sigma2^2]';
-        
+            u_vec = rvec-0.5*sigma;
+            Sig = [sigma1^2, rho*sigma1*sigma2; rho*sigma1*sigma2, sigma2^2];
             
             for i=0:N-1
                 for j=0:N-1
                     u=[u1(i+1)+1i*e1,u2(j+1)+1i*e2];
-                    mu=u*(rvec-0.5*sigma);
-                    Sigma=u*[sigma1^2, rho*sigma1*sigma2; rho*sigma1*sigma2, sigma2^2]*transpose(u);
-                    H(i+1, j+1)=(-1)^(i+j) * Spread.Phi(mu,Sigma,tau) * Spread.P_hat(u);
+                    mu=u*u_vec;
+                    Sigma=u*Sig*u';
+                    phi = Spread.Phi(mu,Sigma,tau);
+                    phat = Spread.P_hat(u);
+                    H(i+1, j+1)=(-1)^(i+j) * phi * phat;
                     HT(i+1, j+1)=(1i*mu-0.5*Sigma-r)*H(i+1, j+1);
                     HH1(i+1, j+1)=(1i*u1(i+1)-e1)*H(i+1, j+1);
                     HH2(i+1, j+1)=(1i*u2(j+1)-e2)*H(i+1, j+1);
@@ -79,7 +82,8 @@ classdef Spread
                     C(i+1, j+1)=(-1)^(i+j)*exp(-e1*x1(i+1)-e2*x2(j+1))*eta1*eta2*(N/(2*pi))^2;
                 end
             end
-            
+            z1 = abs((X1+eta_star1*N*0.5)/eta_star1-l);
+            z2 = abs((X2+eta_star2*N*0.5)/eta_star2-l);
             [xx1,p1]=min(abs((X1+eta_star1*N*0.5)/eta_star1-l));
             [xx2,p2]=min(abs((X2+eta_star2*N*0.5)/eta_star2-l));
         end
@@ -91,23 +95,24 @@ classdef Spread
         end
         
         function [delta1,delta2,theta,gamma11,gamma12,gamma22] = Greek(S1,S2,K,r,sigma1,sigma2,rho,tau)
+            tic
+            [p1,p2,C,HH1,HH2,HT,HHH11,HHH12,HHH22] = Spread.FFTMatrix(S1,S2,K,r,sigma1,sigma2,rho,tau);
             
-            [p1,p2,C,H,HT,HH1,HH2,HHH11,HHH12,HHH22] = Spread.FFTMatrix(S1,S2,K,r,sigma1,sigma2,rho,tau);
-     
             delta1mat=K/S1*exp(-0.05*tau)*real(C.*ifft2(HH1));
             delta2mat=K/S2*exp(-0.05*tau)*real(C.*ifft2(HH2));
             thetamat=K*exp(-0.05*tau)*real(C.*ifft2(HT));
             gamma11mat=-1/S1*delta1mat+K/S1^2*exp(-0.05*tau)*real(C.*ifft2(HHH11));
             gamma12mat=K/(S1*S2)*exp(-0.05*tau)*real(C.*ifft2(HHH12));
             gamma22mat=-1/S2*delta2mat+K/S2^2*exp(-0.05*tau)*real(C.*ifft2(HHH22));
-            
-           
+            p1
+            p2
             delta1 = delta1mat(p1,p2);
             delta2 = delta2mat(p1,p2);
             theta=thetamat(p1,p2);
             gamma11 = gamma11mat(p1,p2);
             gamma12 = gamma12mat(p1,p2);
             gamma22 = gamma22mat(p1,p2);
+            toc
         end
         
         function u_test1 = utest(u_bar,X0,N)           
@@ -188,7 +193,6 @@ classdef Spread
             xlabel('Price of Asset 1')
             ylabel('Price of Asset 2')
             zlabel('Gamma22')
-            hello
         end
     end
 end
